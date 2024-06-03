@@ -3,6 +3,8 @@ const PARSERS = [
     require('./mp4'),
 ];
 
+const maxBytes = 1 * 1024 * 1024;
+
 const createParser = (parsers, buffer) => {
     const parser = parsers.find(({ SIGNATURE, SIGNATURE_OFFSET }) => {
         const signatureBuffer = Buffer.from(SIGNATURE, 'hex');
@@ -18,6 +20,7 @@ const createParser = (parsers, buffer) => {
 };
 
 const getTracksData = (stream) => {
+    let totalBytes = 0;
     return new Promise((resolve, reject) => {
         let parser = null;
 
@@ -32,6 +35,11 @@ const getTracksData = (stream) => {
         };
 
         const onData = async (chunk) => {
+            totalBytes += chunk.length;
+            if (totalBytes > maxBytes) {
+                onError(Error('Reached max bytes allowed'));
+                return;
+            }
             const onSkip = (bytes) => {
                 stream.read(Math.min(1e+9, bytes));
             };
